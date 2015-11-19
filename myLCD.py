@@ -332,7 +332,7 @@ def secondString():
 	return str
 def thirdString():
 	"Creates third string for LCD"
-	str = "News: "+curNews[news_count][scrollCount:scrollCount+33]
+	str = "News: "+curNews[news_count][scrollCount:scrollCount+34]
 	global scrollCount
 	scrollCount +=1
 	return str
@@ -379,7 +379,7 @@ schedule.every(20).seconds.do(changenews_count)
 cnt=0
 while True:
 	schedule.run_pending()
-	time.sleep(0.1)
+	time.sleep(0.01)
 
 	#Update LCD every 100 ms
 	updateLCD()	
