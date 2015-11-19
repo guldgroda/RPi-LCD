@@ -163,7 +163,10 @@ for i in range(0,len(my_currencies)):
 xrt_count = 0
 
 # API information
-app_id = "4af49e92c5924dbda9fc7e2e303b8442"
+app_id = ""	
+with open("openxrtappid") as f:
+	app_id = f.readline()
+
 base_url = "https://openexchangerates.org/api/"
 
 def getLatest(currencies):
