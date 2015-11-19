@@ -9,6 +9,7 @@ from time import gmtime, strftime, sleep
 from xml.dom import minidom
 import urllib2
 import json
+import feedparser
 
 ##Scheduling
 import schedule
@@ -156,7 +157,7 @@ def getTemp():
 		#print "New temp: "+curTemp
 
 ### Exchange rates
-my_currencies = ["USD", "EUR", "DKK"]
+my_currencies = ["USD", "EUR","CNY","GBP","NOK", "DKK"]
 exchange_rates = []
 for i in range(0,len(my_currencies)):
 	exchange_rates.append("N/A") #placeholder
