@@ -266,6 +266,38 @@ def getXRT():
 	for i in range(0,len(my_currencies)):
 		exchange_rates[i] = my_currencies[i]+": "+xrt_latest[i]+"kr "+percent_oneday[i]+"% "+percent_oneweek[i]+"% "+percent_onemonth[i]+"% "+percent_oneyear[i]+"% "
 	
+### News from Reddit World News
+feed_url = "http://www.reddit.com/r/worldnews/.rss"
+nbrTitles = 10 #number of headlines wanted
+news_count = 0
+curNews = []
+for i in range(0,nbrTitles):
+	curNews.append("N/A")
+scrollCount = 0
+
+# For changing which headline to show
+def changenews_count():
+	global news_count
+	news_count+=1
+	if news_count >= nbrTitles:
+		news_count = 0
+	global scrollCount
+	scrollCount = 0
+	return
+
+# For getting news
+def getNews():
+	#Downloading feed
+	d = feedparser.parse(feed_url)
+	global curNews
+	# Emptying curNews 
+	curNews = []
+	# Fill it up with news from feed
+	for post in d.entries:
+		#print "Printing headline"
+		curNews.append(post.title)
+	return
+	
 	
 
 ### LCD Functions
@@ -300,7 +332,9 @@ def secondString():
 	return str
 def thirdString():
 	"Creates third string for LCD"
-	str = "N/A"
+	str = "News: "+curNews[news_count][scrollCount:scrollCount+33]
+	global scrollCount
+	scrollCount +=1
 	return str
 def fourthString():
 	"Creates fourth string for LCD"
@@ -319,8 +353,9 @@ def updateLCD():
 # Run everything once at start of program
 getBusTimes()
 getTemp()
-updateLCD()
 getXRT()
+getNews()
+updateLCD()
 
 #Update bus times every 30 sec
 schedule.every(30).seconds.do(getBusTimes)
@@ -334,6 +369,12 @@ schedule.every(12).hours.do(getXRT)
 # Update exchange rate counter ever 15 seconds
 schedule.every(15).seconds.do(changeXRT_count)
  
+# Update news every 30 mins
+schedule.every(30).minutes.do(getNews)
+
+# Update new counter every 20 seconds
+schedule.every(20).seconds.do(changenews_count)
+
 ### MAIN FUNCTION
 cnt=0
 while True:
