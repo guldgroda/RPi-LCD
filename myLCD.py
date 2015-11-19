@@ -1,13 +1,14 @@
-  #!/usr/bin/python2.7
+#!/usr/bin/python2.7
 
 
 ##Time
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import gmtime, strftime, sleep
 
 ##Data Acqusition
 from xml.dom import minidom
 import urllib2
+import json
 
 ##Scheduling
 import schedule
@@ -63,6 +64,15 @@ def getNodeText(node):
                         result.append(node.data)
         return ''.join(result)
 
+
+### Functions for downloading data
+def getUrlData(url):
+	try:
+		my_data = urllib2.urlopen(url)
+	except urllib2.URLError, e:
+		my_data = "-1"
+	return my_data
+
 ### Functions and variables for getting bus times
 busTimes="Not available yet..."
 def getBusTimes():
@@ -71,55 +81,60 @@ def getBusTimes():
 	busStopName = "Lund Gambro"
 	skanetrafikenURL="http://www.labs.skanetrafiken.se/v2.2/stationresults.asp?selPointFrKey=" + stationID
 	myStopPoint = "A" # towards city/Gunnesbo
-	
-	##Get XML Data from API
-	xml_data = minidom.parse(urllib2.urlopen(skanetrafikenURL))
-	##Get all line elements (each arriving bus is one line"
-	results = xml_data.getElementsByTagName("Line")
-	# Lists for the bus times and DepDeviation	
-	timeList = []
-	deviationList = []
-
-	#Loop through all departures
-	for departure in results:
-		# Get stopPoint
-	        stopPoint = getNodeText(departure.getElementsByTagName("StopPoint")[0])
-        	# We only want buses going towards city centre
-		if stopPoint == myStopPoint:
-			# Save bus name (bus 4)
-                	name = getNodeText(departure.getElementsByTagName("Name")[0])
-                	# Get date and time, formatted YYYY-MM-DDTHH:MM:SS and get only HH:MM
-			time = getNodeText(departure.getElementsByTagName("JourneyDateTime")[0])[11:-3]
-                	# Check if there is any deviation in time.
-			if( len(departure.getElementsByTagName("DepTimeDeviation") ) != 0 ):
-                	        # IF deviation, save the deviation
-                	        deviation = getNodeText(departure.getElementsByTagName("DepTimeDeviation")[0])
-                	else:
-                	        # if no deviation, save 0 as deviation
-                	        deviation = "0"
-	        	# Append time and deviation to respective list.
-			timeList.append(time)
-        	        deviationList.append(deviation)
-	
-	## Create string from times and deviations
-	nbrBusTimes = 6 # How many bus times that can possibly fit screen (Best case)
-	maxChar = 34
-	my_times = ""
-	for i in range (0,nbrBusTimes):
-		# Format should be HH:MM+dev
-		devInt = int(float(deviationList[i])) 
-		nextTime = ""
-		if(devInt < 0):
-			nextTime = timeList[i]+deviationList[i]+" "
-		elif(devInt >0):
-			nextTime = timeList[i]+"+"+str(devInt)+" "
-		else:
-			nextTime = timeList[i]+" "
-		if len(my_times)+len(nextTime) < maxChar:
-			my_times += nextTime
 	global busTimes
-	busTimes = my_times
-	#print "New BusTimes: "+busTimes
+	##Get XML Data from API
+	my_data = getUrlData(skanetrafikenURL)
+	if "-1" in my_data:
+		busTimes = "Something went wrong..."
+		print "Something went wrong..."
+	else:
+		xml_data = minidom.parse(urllib2.urlopen(skanetrafikenURL))
+		##Get all line elements (each arriving bus is one line"
+		results = xml_data.getElementsByTagName("Line")
+		# Lists for the bus times and DepDeviation	
+		timeList = []
+		deviationList = []
+	
+		#Loop through all departures
+		for departure in results:
+			# Get stopPoint
+		        stopPoint = getNodeText(departure.getElementsByTagName("StopPoint")[0])
+	        	# We only want buses going towards city centre
+			if stopPoint == myStopPoint:
+				# Save bus name (bus 4)
+	                	name = getNodeText(departure.getElementsByTagName("Name")[0])
+	                	# Get date and time, formatted YYYY-MM-DDTHH:MM:SS and get only HH:MM
+				time = getNodeText(departure.getElementsByTagName("JourneyDateTime")[0])[11:-3]
+	                	# Check if there is any deviation in time.
+				if( len(departure.getElementsByTagName("DepTimeDeviation") ) != 0 ):
+	                	        # IF deviation, save the deviation
+	                	        deviation = getNodeText(departure.getElementsByTagName("DepTimeDeviation")[0])
+	                	else:
+	                	        # if no deviation, save 0 as deviation
+	                	        deviation = "0"
+		        	# Append time and deviation to respective list.
+				timeList.append(time)
+	        	        deviationList.append(deviation)
+		
+		## Create string from times and deviations
+		nbrBusTimes = 6 # How many bus times that can possibly fit screen (Best case)
+		maxChar = 34
+		my_times = ""
+		for i in range (0,nbrBusTimes):
+			# Format should be HH:MM+dev
+			devInt = int(float(deviationList[i])) 
+			nextTime = ""
+			if(devInt < 0):
+				nextTime = timeList[i]+deviationList[i]+" "
+			elif(devInt >0):
+				nextTime = timeList[i]+"+"+str(devInt)+" "
+			else:
+				nextTime = timeList[i]+" "
+			if len(my_times)+len(nextTime) < maxChar:
+				my_times += nextTime
+		busTimes = my_times
+		#print "New BusTimes: "+busTimes
+	
 	return
 
 ### Temperature
@@ -128,13 +143,126 @@ curTemp = "NA" #placeholder...
 def getTemp():
 	placeID = "Sverige/Scania/Lund"
 	weatherNowURL = "http://www.yr.no/place/" + placeID + "/forecast.xml"
-	xml_data = minidom.parse(urllib2.urlopen(weatherNowURL))
-	node = xml_data.getElementsByTagName("temperature")[0]
-	temp = getNodeText(node.attributes.values()[0])
 	global curTemp
-	curTemp = temp
-	#print "New temp: "+curTemp
+	my_data = getUrlData(weatherNowURL)
+	if "-1" in my_data:
+		curTemp = "NA"
+		print "Lost internet connection..."
+	else:
+		xml_data = minidom.parse(urllib2.urlopen(weatherNowURL))
+		node = xml_data.getElementsByTagName("temperature")[0]
+		temp = getNodeText(node.attributes.values()[0])
+		curTemp = temp
+		#print "New temp: "+curTemp
 
+### Exchange rates
+my_currencies = ["USD", "EUR", "DKK"]
+exchange_rates = []
+for i in range(0,len(my_currencies)):
+	exchange_rates.append("N/A") #placeholder
+xrt_count = 0
+
+# API information
+app_id = "4af49e92c5924dbda9fc7e2e303b8442"
+base_url = "https://openexchangerates.org/api/"
+
+def getLatest(currencies):
+	latest = "latest.json?app_id="
+	# Create URL
+	my_url = base_url + latest + app_id
+	# Get JSON data from URL
+	json_data = json.load(getUrlData(my_url))
+	# Get exchange rates from JSON data
+	rates = json_data['rates']
+	my_rates =  []
+	for currency in currencies:
+		#print currency
+		#All currencies correlating to USD, we convert to SEK...
+		USD = rates['SEK']
+		if "USD" in currency:
+			this_xrt = "%.2f" % USD
+		else:
+			this_xrt = "%.2f" % (USD/rates[currency])
+		# After getting XRT, append it to
+		#print type(this_xrt) 
+		my_rates.append(this_xrt)
+	#print my_rates
+	return my_rates
+
+def getHistory(date, currencies):
+	history = "historical/"+date+".json?app_id="
+	# Create URL
+	my_url = base_url + history + app_id
+	#print my_url
+	# Get JSON data from URL	
+	json_data = json.load(getUrlData(my_url))
+	rates = json_data['rates']
+	my_rates =  []
+	for currency in currencies:
+		#print currency
+		#All currencies correlating to USD, we convert to SEK...
+		USD = rates['SEK']
+		if "USD" in currency:
+			this_xrt = "%.2f" % USD
+		else:
+			this_xrt = "%.2f" % (USD/rates[currency])
+		# After getting XRT, append it to
+		#print type(this_xrt) 
+		my_rates.append(this_xrt)
+	#print my_rates
+	return my_rates
+
+def getPercent(now,then):
+	percents = []
+	nbr = len(now)	
+	for i in range(0, nbr):
+		#print float(now[i])
+		#print float(then[i])
+		percent = 100*(float(now[i]) - float(then[i]))/float(then[i])
+		#print percent
+		percents.append(str("%.2f" % percent))
+
+	return percents
+		 
+	
+## Function for getting XRT (Exchange Rate)
+def changeXRT_count():
+	global xrt_count
+	xrt_count+=1
+	if xrt_count >= len(my_currencies):
+		xrt_count = 0
+
+def getXRT():
+	#Variable to save printed string to
+	global exchange_rates 
+	
+	#print "get latest XRT"
+	xrt_latest = getLatest(my_currencies)
+	
+	# Get dates
+	date_today = datetime.now().date()
+	date_oneday = str(date_today - timedelta(days = 1))
+	date_oneweek = str(date_today - timedelta(days = 7))
+	date_onemonth = str(date_today - timedelta(days = 30))
+	date_oneyear = str(date_today - timedelta(days = 365))
+	
+	#Getting historical data
+	xrt_oneday = getHistory(date_oneday, my_currencies)
+	xrt_oneweek = getHistory(date_oneweek, my_currencies)
+	xrt_onemonth = getHistory(date_onemonth, my_currencies)
+	xrt_oneyear = getHistory(date_oneyear, my_currencies)	
+	
+	# Calculating percentages
+	percent_oneday = getPercent(xrt_latest,xrt_oneday)
+	percent_oneweek = getPercent(xrt_latest,xrt_oneweek)
+	percent_onemonth = getPercent(xrt_latest,xrt_onemonth)
+	percent_oneyear = getPercent(xrt_latest,xrt_oneyear)
+	
+	#Store to array of rates
+	for i in range(0,len(my_currencies)):
+		exchange_rates[i] = my_currencies[i]+": "+xrt_latest[i]+"kr "+percent_oneday[i]+"% "+percent_oneweek[i]+"% "+percent_onemonth[i]+"% "+percent_oneyear[i]+"% "
+	
+	
 
 ### LCD Functions
 def printLine( lineNr, str):
@@ -152,6 +280,7 @@ def printLine( lineNr, str):
 		lcd_bottom.cursor_pos=(lineNr,0)
 		lcd_bottom.write_string(str)
 	return
+
 def clearLine(lineNr):
 	printLine(lineNr, "                                            ")
 	return
@@ -171,7 +300,8 @@ def thirdString():
 	return str
 def fourthString():
 	"Creates fourth string for LCD"
-	str = "N/A"
+	global xrt_count
+	str = exchange_rates[xrt_count]
 	return str
 
 def updateLCD():
@@ -186,6 +316,7 @@ def updateLCD():
 getBusTimes()
 getTemp()
 updateLCD()
+getXRT()
 
 #Update bus times every 30 sec
 schedule.every(30).seconds.do(getBusTimes)
@@ -193,6 +324,12 @@ schedule.every(30).seconds.do(getBusTimes)
 # Update temp every 30 minutes
 schedule.every(30).minutes.do(getTemp)
 
+# Update exchange rate XRT every 12 hours
+schedule.every(12).hours.do(getXRT)
+
+# Update exchange rate counter ever 15 seconds
+schedule.every(15).seconds.do(changeXRT_count)
+ 
 ### MAIN FUNCTION
 cnt=0
 while True:
