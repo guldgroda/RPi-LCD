@@ -328,11 +328,12 @@ def firstString():
 	return str
 def secondString():
 	"Creates second string for LCD"
-	str = "Buss 4: "+busTimes
+	str = "Bus 4: "+busTimes
 	return str
 def thirdString():
 	"Creates third string for LCD"
-	str = "News: "+curNews[news_count][scrollCount:scrollCount+34]
+	my_news = "          "+curNews[news_count]
+	str = "News: "+my_news[scrollCount:scrollCount+34]
 	global scrollCount
 	scrollCount +=1
 	return str
