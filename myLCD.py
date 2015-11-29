@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 
 
 ##Time
@@ -15,9 +15,12 @@ import feedparser
 import schedule
 import time
 
-## Rasperry libraries
+## Raspberry libraries
 import RPi.GPIO as GPIO
 from RPLCD import CharLCD
+
+## Shutdown management
+import os.path
 
 ##define staic values
 
@@ -350,6 +353,24 @@ def updateLCD():
         printLine(3,fourthString())
 	#print "LCD update"	
 
+## Shutdown management
+def shutdown_message():
+	# Print shutdown message
+	printLine(0,40*'-')
+        printLine(1,13*' '+"Shutting down")
+	printLine(2,5*' '+"Re-plug power cable to restart")
+        printLine(3,40*'-')
+	# Terminate LCD program
+	quit()
+	
+
+### MAIN PROGRAM
+# Remove old shutdown file
+try:
+	os.remove("/home/pi/RPi-LCD/shutdown")
+except (OSError):
+	pass
+
 ### SCHEDULING
 # Run everything once at start of program
 getBusTimes()
@@ -381,7 +402,13 @@ cnt=0
 while True:
 	schedule.run_pending()
 	time.sleep(0.01)
-
+	#Check if shutting down
+	try:
+		if os.path.isfile("/home/pi/RPi-LCD/shutdown"):
+			print "Shutting down"
+			shutdown_message()
+	except (OSError):
+		pass
 	#Update LCD every 100 ms
 	updateLCD()	
-
+	
